@@ -1,0 +1,38 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "TingMusic",
+  "version": "0.1.0",
+  "identifier": "com.tingmusic.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "macOSPrivateApi": true,
+    "windows": [
+      {
+        "title": "TingMusic",
+        "label": "main",
+        "width": 400,
+        "height": 100,
+        "minWidth": 360,
+        "minHeight": 96,
+        "maxWidth": 640,
+        "maxHeight": 900,
+        "decorations": false,
+        "transparent": true,
+        "resizable": true,
+        "shadow": false
+      }
+    ],
+    "security": { "csp": null }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": ["icons/icon.png"]
+  },
+  "plugins": {}
+}

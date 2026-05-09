@@ -1,0 +1,381 @@
+:root {
+  color-scheme: light dark;
+  --accent: #d33a31;
+  --hi: light-dark(#1a1a1a, #f0f0f0);
+  --card-bg: light-dark(rgba(255, 255, 255, 0.95), rgba(36, 36, 36, 0.95));
+  --card-border: rgba(127, 127, 127, 0.22);
+  --card-shadow: 0 4px 16px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  --row-hover: rgba(127, 127, 127, 0.10);
+  --row-active-bg: rgba(127, 127, 127, 0.18);
+  --muted: #888;
+  --track: rgba(127, 127, 127, 0.28);
+  --text: light-dark(#222, #ddd);
+}
+
+/* Whitered theme — opaque white card, red accent, neutral grays elsewhere.
+   Targets the .app root so card / panel / menu / etc. all switch together. */
+.app.theme-whitered {
+  color-scheme: light;
+  --accent: #d33a31;
+  --hi: #d33a31;
+  --card-bg: #ffffff;
+  --card-border: rgba(0, 0, 0, 0.10);
+  --card-shadow: 0 4px 14px rgba(0, 0, 0, 0.10), 0 0 0 1px rgba(0, 0, 0, 0.03);
+  --row-hover: rgba(211, 58, 49, 0.06);
+  --row-active-bg: rgba(211, 58, 49, 0.10);
+  --muted: #999;
+  --track: rgba(0, 0, 0, 0.10);
+  --text: #2a2a2a;
+  color: var(--text);
+}
+.app.theme-whitered .now-playing .cover-overlay {
+  /* In white-red, the white overlay is invisible against the white card.
+     Use a soft red disc instead. */
+  background: rgba(211, 58, 49, 0.95);
+  color: #fff;
+}
+.app.theme-whitered .tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+.app.theme-whitered .playlist .row.active .row-title { color: var(--accent); }
+.app.theme-whitered .lyrics.synced .line.active { color: var(--accent); }
+.app.theme-whitered .settings-menu button.active { color: var(--accent); }
+.app.theme-whitered .settings-menu .settings-check { color: var(--accent); }
+/* Whitered keeps the default white-pearl thumb (matches the netease embed
+   reference): a small white circle with a faint gray rim and soft shadow,
+   sitting on a thin neutral track. No theme-specific override. */
+
+body, html, #root {
+  margin: 0; height: 100%;
+  font-family: -apple-system, system-ui, sans-serif;
+  background: transparent;
+  /* Hide scrollbars during expand/settings resize animations — for one or
+     two frames the menu/panel content can be taller than the window before
+     setSize catches up. */
+  overflow: hidden;
+}
+
+.app {
+  display: flex; flex-direction: column;
+  height: 100%;
+  padding: 8px;
+  gap: 8px;
+  box-sizing: border-box;
+}
+.app.compact { padding-bottom: 0; } /* card sits flush; window matches card height */
+/* When expanded, card + panel become a single surface (no gap, flat seam). */
+.app.expanded { gap: 0; }
+.app.expanded .now-playing {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.app.expanded .panel {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-top-width: 0; /* avoid double border at the seam — card's bottom border is the divider */
+}
+button { font-size: 14px; }
+
+/* ---------- Settings (gear, top-right of card) ---------- */
+/* No z-index on the wrap — otherwise it traps the dropdown's z-index inside
+   its own stacking context, letting the bottom-right .expand-btn (z-index: 5,
+   later in DOM order) render on top of the menu. */
+.settings-wrap { position: absolute; top: 4px; right: 4px; }
+/* ---------- Expand toggle (bottom-right of card) ---------- */
+.expand-btn {
+  position: absolute; bottom: 4px; right: 4px; z-index: 5;
+  background: transparent; border: 0; padding: 4px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: inherit; opacity: 0.45;
+  border-radius: 4px;
+}
+.expand-btn:hover { opacity: 1; background: rgba(127,127,127,0.12); }
+.expand-btn svg { width: 16px; height: 16px; }
+.settings-btn {
+  background: transparent; border: 0; padding: 4px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: inherit; opacity: 0.55;
+  border-radius: 4px;
+}
+.settings-btn:hover { opacity: 1; background: rgba(127,127,127,0.12); }
+.settings-btn svg { width: 16px; height: 16px; }
+.settings-menu {
+  position: absolute; top: calc(100% + 4px); right: 0;
+  min-width: 180px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 4px;
+  z-index: 100;
+}
+.settings-menu button {
+  display: flex; align-items: center;
+  width: 100%; text-align: left;
+  background: transparent; border: 0; padding: 6px 10px;
+  cursor: pointer; color: inherit; font: inherit; border-radius: 6px;
+}
+.settings-menu button:hover { background: var(--row-hover); }
+.settings-menu button.active { color: var(--hi); font-weight: 600; }
+.settings-menu .settings-check { display: inline-block; width: 16px; color: var(--hi); }
+/* Inline radio-button group used for play mode / cover shape / theme. */
+.settings-menu .settings-pill-row {
+  display: flex; gap: 6px;
+  padding: 4px 10px 8px;
+}
+.settings-menu .settings-pill {
+  /* override the generic .settings-menu button rule (border:0, text-align:left) */
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 10px;
+  font-size: 12px;
+  background: rgba(127, 127, 127, 0.10);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  color: var(--muted);
+  text-align: center;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.settings-menu .settings-pill:hover {
+  background: rgba(127, 127, 127, 0.18);
+  color: var(--hi);
+}
+.settings-menu .settings-pill.active {
+  background: var(--row-active-bg);
+  color: var(--hi);
+  font-weight: 600;
+  border-color: var(--accent);
+}
+.settings-divider { height: 1px; background: var(--card-border); margin: 4px 6px; }
+.settings-section-label { font-size: 11px; color: var(--muted); padding: 6px 10px 2px; }
+
+/* ---------- Header row (now-playing card + volume) ---------- */
+.header-row { display: flex; align-items: center; gap: 8px; }
+.header-row .now-playing { flex: 1; min-width: 0; }
+
+/* Volume slider lives in the gear menu now */
+.settings-volume {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 10px 8px;
+}
+.settings-volume .volume-icon { width: 14px; height: 14px; flex-shrink: 0; color: var(--muted); }
+.settings-volume input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  flex: 1; height: 4px;
+  background: var(--track);
+  border-radius: 2px;
+  cursor: pointer;
+  outline: none;
+}
+.settings-volume input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #ffffff 0%, #ededed 55%, #c8c8c8 100%);
+  border: 0;
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.18),
+    0 0 0 1.5px rgba(255,255,255,0.08),
+    0 1px 2px rgba(0,0,0,0.28),
+    inset 0 0.5px 0.5px rgba(255,255,255,0.85),
+    inset 0 -0.5px 0.5px rgba(0,0,0,0.08);
+  cursor: pointer;
+  transition: transform 120ms ease;
+}
+.settings-volume input[type="range"]:hover::-webkit-slider-thumb { transform: scale(1.08); }
+.settings-volume input[type="range"]:focus-visible { outline: none; }
+
+/* ---------- Now playing card ---------- */
+.now-playing {
+  position: relative;
+  /* Sit above .panel so the gear dropdown — which lives in the card's own
+     backdrop-filter-induced stacking context — stays on top when extended
+     downward into the panel area. */
+  z-index: 10;
+  display: flex; gap: 12px; align-items: center; min-width: 0;
+  padding: 8px 12px;
+  padding-right: 36px; /* room for the gear + expand buttons stacked on the right */
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.now-playing .cover {
+  position: relative;
+  width: 64px; height: 64px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+}
+.now-playing .cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.now-playing .cover .placeholder {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 30% 30%, #4a4a52, #1d1d22 70%);
+}
+.now-playing .cover .placeholder svg { width: 88%; height: 88%; }
+.now-playing .cover-circle { border-radius: 50%; }
+.now-playing .cover-circle .placeholder { background: #0a0a0a; }
+.now-playing .cover-circle .placeholder svg { width: 100%; height: 100%; }
+
+/* Spin the disc / cover image while playing — only in circle mode. */
+@keyframes cover-spin {
+  to { transform: rotate(360deg); }
+}
+.now-playing .cover-circle > img,
+.now-playing .cover-circle > .placeholder {
+  animation: cover-spin 20s linear infinite;
+  animation-play-state: paused;
+}
+.now-playing .cover-circle.playing > img,
+.now-playing .cover-circle.playing > .placeholder {
+  animation-play-state: running;
+}
+.now-playing .cover-button {
+  padding: 0; border: 0; background: transparent; cursor: pointer; color: inherit; font: inherit;
+}
+.now-playing .cover-button:focus-visible { outline: 2px solid rgba(127,127,127,0.5); outline-offset: 2px; }
+.now-playing .cover-overlay {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  color: #1f1f1f;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  opacity: 0; transition: opacity 140ms ease;
+  pointer-events: none;
+}
+.now-playing .cover-overlay svg { width: 18px; height: 18px; }
+.now-playing .cover-button.paused .cover-overlay { opacity: 1; }
+.now-playing .cover-button:hover .cover-overlay { opacity: 1; }
+.now-playing .meta { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.now-playing .title-line {
+  display: flex; align-items: baseline; gap: 6px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.now-playing .title-line .title { font-weight: 600; font-size: 14px; flex-shrink: 0; max-width: 60%; overflow: hidden; text-overflow: ellipsis; }
+.now-playing .title-line .dash { color: #999; flex-shrink: 0; font-size: 12px; }
+.now-playing .title-line .artist { color: var(--muted); font-size: 12px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.now-playing .progress-row { display: flex; align-items: center; gap: 8px; }
+.now-playing .progress-row input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  flex: 1; height: 4px;
+  background: var(--track);
+  border-radius: 2px;
+  cursor: pointer;
+  outline: none;
+}
+.now-playing .progress-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #ffffff 0%, #ededed 55%, #c8c8c8 100%);
+  border: 0;
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.18),                 /* crisp outline */
+    0 0 0 2px rgba(255,255,255,0.08),           /* tiny halo */
+    0 1px 3px rgba(0,0,0,0.3),                  /* drop shadow */
+    inset 0 0.5px 0.5px rgba(255,255,255,0.9),  /* top specular */
+    inset 0 -1px 1px rgba(0,0,0,0.08);          /* bottom shading */
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 160ms ease;
+}
+.now-playing .progress-row input[type="range"]:hover::-webkit-slider-thumb {
+  transform: scale(1.1);
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.18),
+    0 0 0 3px rgba(255,255,255,0.14),
+    0 1px 4px rgba(0,0,0,0.35),
+    inset 0 0.5px 0.5px rgba(255,255,255,0.9),
+    inset 0 -1px 1px rgba(0,0,0,0.08);
+}
+.now-playing .progress-row input[type="range"]:focus-visible { outline: none; }
+.now-playing .progress-row input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.18),
+    0 0 0 3px rgba(255,255,255,0.18),
+    0 1px 4px rgba(0,0,0,0.35),
+    inset 0 0.5px 0.5px rgba(255,255,255,0.9),
+    inset 0 -1px 1px rgba(0,0,0,0.08);
+}
+.now-playing .progress-row .time {
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* ---------- Panel (tabs + list/lyrics) ---------- */
+.panel {
+  flex: 1;
+  display: flex; flex-direction: column;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--card-border);
+  background: rgba(127, 127, 127, 0.04);
+}
+.tabs button {
+  flex: 1;
+  padding: 8px 12px;
+  background: transparent; border: 0;
+  cursor: pointer; color: inherit;
+  opacity: 0.55;
+  font-size: 13px;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: opacity 120ms, color 120ms, border-color 120ms;
+}
+.tabs button:hover { opacity: 0.85; }
+.tabs button.active {
+  opacity: 1;
+  color: var(--hi);
+  font-weight: 600;
+  border-bottom-color: rgba(127,127,127,0.55);
+}
+.middle { flex: 1; min-height: 200px; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ---------- Playlist ---------- */
+.playlist { overflow-x: hidden !important; }
+.playlist .row {
+  display: flex; align-items: center;
+  padding: 8px 12px; gap: 12px;
+  cursor: pointer; box-sizing: border-box; overflow: hidden;
+  transition: background 100ms;
+}
+.playlist .row:hover { background: var(--row-hover); }
+.playlist .row.active { background: var(--row-active-bg); }
+.playlist .row.active .row-title { color: var(--hi); font-weight: 600; }
+.playlist .row-title { flex: 2; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
+.playlist .row-artist { flex: 1; min-width: 0; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+.playlist.empty, .lyrics.empty { color: var(--muted); display: flex; align-items: center; justify-content: center; flex: 1; font-size: 13px; }
+
+/* ---------- Lyrics ---------- */
+.lyrics.synced { overflow-y: auto; overflow-x: hidden; padding: 12px 12px; text-align: center; }
+.lyrics.synced .line {
+  padding: 4px 0; opacity: 0.45;
+  transition: all 200ms ease;
+  word-break: break-word; overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.lyrics.synced .line.active {
+  opacity: 1; font-weight: 600;
+  color: var(--hi);
+  transform: scale(1.05);
+}
+.lyrics.plain { padding: 12px; white-space: pre-wrap; overflow-wrap: anywhere; overflow-x: hidden; font-size: 13px; }
