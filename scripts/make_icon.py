@@ -8,18 +8,25 @@ Output: src-tauri/icons/icon.png (and resized variants for Tauri bundles).
 from PIL import Image, ImageDraw, ImageFilter
 from pathlib import Path
 
-S = 1024  # canvas size
+S = 1024                 # full canvas
+INSET = 100              # transparent padding around the squircle so it
+                         # matches other macOS dock icons (~80% tile)
+TILE = S - 2 * INSET     # 824 — the visible squircle size
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "src-tauri" / "icons"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def squircle_mask(size, radius_ratio=0.225):
-    """macOS-style rounded square mask."""
-    r = int(size * radius_ratio)
-    mask = Image.new("L", (size, size), 0)
+def squircle_mask(canvas, tile, inset, radius_ratio=0.2237):
+    """Inset macOS-style rounded square mask centered on the canvas."""
+    r = int(tile * radius_ratio)
+    mask = Image.new("L", (canvas, canvas), 0)
     d = ImageDraw.Draw(mask)
-    d.rounded_rectangle((0, 0, size - 1, size - 1), radius=r, fill=255)
+    d.rounded_rectangle(
+        (inset, inset, canvas - inset - 1, canvas - inset - 1),
+        radius=r,
+        fill=255,
+    )
     return mask
 
 
@@ -130,14 +137,14 @@ def make_icon(size=S):
     glow = glow.filter(ImageFilter.GaussianBlur(120))
     bg.alpha_composite(glow)
 
-    # Draw the vinyl on top — keep it inside the Apple "safe area" (~80%)
-    # so the icon reads well at Dock size with breathing room.
+    # Vinyl sits inside the inset tile; size it relative to the tile so the
+    # disc-to-padding ratio stays consistent.
     cx, cy = size // 2, size // 2
-    outer_r = int(size * 0.30)
+    outer_r = int(TILE * 0.32)
     draw_vinyl(bg, cx, cy, outer_r)
 
-    # Apply rounded-square mask
-    mask = squircle_mask(size)
+    # Apply inset rounded-square mask
+    mask = squircle_mask(size, TILE, INSET)
     out = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     out.paste(bg, mask=mask)
     return out
