@@ -348,7 +348,11 @@ button { font-size: 14px; }
   font-weight: 600;
   border-bottom-color: rgba(127,127,127,0.55);
 }
-.middle { flex: 1; min-height: 200px; display: flex; flex-direction: column; overflow: hidden; }
+/* min-height:0 lets the flex child shrink below its content; AutoSizer in
+   the Playlist needs the parent to have a concrete computed height to
+   measure correctly. Drop the inner flex layout (only one child renders
+   at a time anyway) so the AutoSizer wrapper inherits 100% naturally. */
+.middle { flex: 1; min-height: 0; overflow: hidden; position: relative; }
 
 /* ---------- Playlist ---------- */
 .playlist { overflow-x: hidden !important; }

@@ -7,6 +7,13 @@ vi.mock("../lib/api", () => ({
   api: { play: vi.fn(async () => undefined) },
 }));
 
+// AutoSizer measures parent via ResizeObserver, which gives 0 in happy-dom.
+// Force a fixed size so children render.
+vi.mock("react-virtualized-auto-sizer", () => ({
+  default: ({ children }: { children: (size: { width: number; height: number }) => React.ReactNode }) =>
+    children({ width: 400, height: 320 }),
+}));
+
 import { api } from "../lib/api";
 
 beforeEach(() => useStore.setState(useStore.getState().__resetForTest()));

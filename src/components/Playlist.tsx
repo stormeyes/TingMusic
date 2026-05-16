@@ -1,4 +1,5 @@
 import { FixedSizeList as List } from "react-window";
+import AutoSizer from "react-virtualized-auto-sizer";
 import { useStore } from "../store";
 import { api } from "../lib/api";
 
@@ -27,14 +28,18 @@ export default function Playlist() {
   };
 
   return (
-    <List
-      className="playlist"
-      height={320}
-      itemCount={tracks.length}
-      itemSize={44}
-      width="100%"
-    >
-      {Row}
-    </List>
+    <AutoSizer>
+      {({ width, height }) => (
+        <List
+          className="playlist"
+          height={height}
+          itemCount={tracks.length}
+          itemSize={44}
+          width={width}
+        >
+          {Row}
+        </List>
+      )}
+    </AutoSizer>
   );
 }

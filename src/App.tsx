@@ -83,6 +83,16 @@ export default function App() {
     let unlistenProgress: (() => void) | null = null;
     let unlistenTrack: (() => void) | null = null;
 
+    // Floating chrome-less windows are easy to drag off-screen and they sit
+    // behind other apps on startup. Force center + bring to front so the
+    // user can always find it after launch.
+    (async () => {
+      const w = getCurrentWindow();
+      try { await w.center(); } catch (e) { console.error(e); }
+      try { await w.show(); } catch (e) { console.error(e); }
+      try { await w.setFocus(); } catch (e) { console.error(e); }
+    })();
+
     (async () => {
       const cfg = await api.loadConfig();
       setVolume(cfg.volume);
