@@ -348,11 +348,12 @@ button { font-size: 14px; }
   font-weight: 600;
   border-bottom-color: rgba(127,127,127,0.55);
 }
-/* min-height:0 lets the flex child shrink below its content; AutoSizer in
-   the Playlist needs the parent to have a concrete computed height to
-   measure correctly. Drop the inner flex layout (only one child renders
-   at a time anyway) so the AutoSizer wrapper inherits 100% naturally. */
+/* min-height:0 lets the flex child shrink below its content. The Playlist
+   uses ResizeObserver on a wrapper div to measure available space, so we
+   give middle position:relative + a single absolutely-positioned wrapper
+   inside it. */
 .middle { flex: 1; min-height: 0; overflow: hidden; position: relative; }
+.playlist-wrap { position: absolute; inset: 0; }
 
 /* ---------- Playlist ---------- */
 .playlist { overflow-x: hidden !important; }

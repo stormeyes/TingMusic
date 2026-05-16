@@ -1,5 +1,5 @@
+import { useEffect, useRef, useState } from "react";
 import { FixedSizeList as List } from "react-window";
-import AutoSizer from "react-virtualized-auto-sizer";
 import { useStore } from "../store";
 import { api } from "../lib/api";
 
@@ -7,6 +7,21 @@ export default function Playlist() {
   const tracks = useStore((s) => s.tracks);
   const currentId = useStore((s) => s.currentTrackId);
   const setCurrent = useStore((s) => s.setCurrentTrackId);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      setSize({ width: r.width, height: r.height });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   if (tracks.length === 0) {
     return <div className="playlist empty">未找到音频文件</div>;
@@ -28,18 +43,18 @@ export default function Playlist() {
   };
 
   return (
-    <AutoSizer>
-      {({ width, height }) => (
+    <div ref={wrapRef} className="playlist-wrap">
+      {size.height > 0 && (
         <List
           className="playlist"
-          height={height}
+          height={size.height}
           itemCount={tracks.length}
           itemSize={44}
-          width={width}
+          width={size.width}
         >
           {Row}
         </List>
       )}
-    </AutoSizer>
+    </div>
   );
 }

@@ -7,12 +7,18 @@ vi.mock("../lib/api", () => ({
   api: { play: vi.fn(async () => undefined) },
 }));
 
-// AutoSizer measures parent via ResizeObserver, which gives 0 in happy-dom.
-// Force a fixed size so children render.
-vi.mock("react-virtualized-auto-sizer", () => ({
-  default: ({ children }: { children: (size: { width: number; height: number }) => React.ReactNode }) =>
-    children({ width: 400, height: 320 }),
-}));
+// happy-dom does not implement ResizeObserver or layout for getBoundingClientRect
+// in a useful way. Stub ResizeObserver and force getBoundingClientRect so the
+// Playlist's measurement effect resolves to a non-zero size.
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+(globalThis as { ResizeObserver?: unknown }).ResizeObserver = ResizeObserverStub;
+Element.prototype.getBoundingClientRect = function () {
+  return { width: 400, height: 320, top: 0, left: 0, bottom: 320, right: 400, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+};
 
 import { api } from "../lib/api";
 
