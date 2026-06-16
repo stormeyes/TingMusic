@@ -97,21 +97,40 @@ impl ServerHandle {
 
 async fn serve_manifest(State(state): State<ServerState>) -> Json<Manifest> {
     let root = state.root.lock().clone();
-    Json(build_manifest(&root))
+    // build_manifest does blocking directory walks + stat syscalls; keep it off
+    // the async executor so a large library can't stall the tokio worker.
+    let manifest = tokio::task::spawn_blocking(move || build_manifest(&root))
+        .await
+        .unwrap_or_else(|_| Manifest {
+            version: 1,
+            library_name: String::new(),
+            files: Vec::new(),
+        });
+    Json(manifest)
 }
 
 async fn serve_file(State(state): State<ServerState>, AxumPath(rel): AxumPath<String>) -> Response {
     let root = state.root.lock().clone();
-    match resolve_safe_path(&root, &rel) {
-        Some(full) => match tokio::fs::read(&full).await {
-            Ok(bytes) => (
-                [(header::CONTENT_TYPE, "application/octet-stream")],
-                bytes,
-            )
-                .into_response(),
-            Err(_) => StatusCode::NOT_FOUND.into_response(),
-        },
-        None => StatusCode::FORBIDDEN.into_response(),
+    // resolve_safe_path canonicalizes (a blocking syscall); run it off-executor.
+    let resolved = tokio::task::spawn_blocking(move || resolve_safe_path(&root, &rel))
+        .await
+        .ok()
+        .flatten();
+    let Some(full) = resolved else {
+        return StatusCode::FORBIDDEN.into_response();
+    };
+    match tokio::fs::File::open(&full).await {
+        Ok(file) => {
+            // Stream the file instead of buffering the whole thing in memory —
+            // audio files (esp. WAV/FLAC) can be hundreds of MB.
+            let stream = tokio_util::io::ReaderStream::new(file);
+            let body = axum::body::Body::from_stream(stream);
+            ([(header::CONTENT_TYPE, "application/octet-stream")], body).into_response()
+        }
+        Err(e) => {
+            eprintln!("serve_file: failed to open {full:?}: {e}");
+            StatusCode::NOT_FOUND.into_response()
+        }
     }
 }
 
@@ -125,15 +144,16 @@ pub fn router(state: ServerState) -> Router {
 /// 从 preferred_port 起尝试绑定,占用则向上顺延 20 个端口。
 /// 成功后在 tokio runtime 上 spawn 服务,返回实际端口 + 句柄。
 pub async fn start(state: ServerState, preferred_port: u16) -> anyhow::Result<ServerHandle> {
-    let mut bound: Option<(tokio::net::TcpListener, u16)> = None;
+    let mut listener_opt: Option<tokio::net::TcpListener> = None;
     for p in preferred_port..preferred_port.saturating_add(20) {
         if let Ok(l) = tokio::net::TcpListener::bind(("0.0.0.0", p)).await {
-            bound = Some((l, p));
+            listener_opt = Some(l);
             break;
         }
     }
-    let (listener, port) =
-        bound.ok_or_else(|| anyhow::anyhow!("no free port near {preferred_port}"))?;
+    let listener =
+        listener_opt.ok_or_else(|| anyhow::anyhow!("no free port near {preferred_port}"))?;
+    let port = listener.local_addr()?.port();
     let app = router(state);
     let (tx, rx) = tokio::sync::oneshot::channel::<()>();
     tokio::spawn(async move {
@@ -276,7 +296,7 @@ mod tests {
     async fn manifest_endpoint_returns_files() {
         let dir = tempdir().unwrap();
         write(dir.path(), "a.mp3", b"hello");
-        let handle = start(test_state(dir.path()), 18737).await.unwrap();
+        let handle = start(test_state(dir.path()), 0).await.unwrap();
         let url = format!("http://127.0.0.1:{}/manifest", handle.port);
         let body: serde_json::Value = reqwest::get(&url).await.unwrap().json().await.unwrap();
         assert_eq!(body["version"], 1);
@@ -289,7 +309,7 @@ mod tests {
     async fn file_endpoint_serves_bytes() {
         let dir = tempdir().unwrap();
         write(dir.path(), "a.mp3", b"hello");
-        let handle = start(test_state(dir.path()), 18760).await.unwrap();
+        let handle = start(test_state(dir.path()), 0).await.unwrap();
         let url = format!("http://127.0.0.1:{}/files/a.mp3", handle.port);
         let bytes = reqwest::get(&url).await.unwrap().bytes().await.unwrap();
         assert_eq!(&bytes[..], b"hello");
@@ -300,7 +320,7 @@ mod tests {
     async fn file_endpoint_rejects_traversal() {
         let dir = tempdir().unwrap();
         write(dir.path(), "a.mp3", b"hello");
-        let handle = start(test_state(dir.path()), 18780).await.unwrap();
+        let handle = start(test_state(dir.path()), 0).await.unwrap();
         let url = format!("http://127.0.0.1:{}/files/..%2f..%2fetc%2fpasswd", handle.port);
         let status = reqwest::get(&url).await.unwrap().status();
         assert!(status.is_client_error(), "expected 4xx, got {status}");

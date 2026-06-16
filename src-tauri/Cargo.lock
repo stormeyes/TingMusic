@@ -4442,6 +4442,7 @@ dependencies = [
  "tauri-plugin-dialog",
  "tempfile",
  "tokio",
+ "tokio-util",
  "urlencoding",
  "walkdir",
 ]
