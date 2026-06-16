@@ -70,6 +70,7 @@ mod tests {
             mode: Mode::RepeatOne,
             cover_shape: crate::types::CoverShape::Square,
             theme: crate::types::Theme::Whitered,
+            lan_sync: true,
         };
         write_to(&path, &cfg).unwrap();
         let back = read_from(&path);
