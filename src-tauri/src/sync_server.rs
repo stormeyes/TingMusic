@@ -1,5 +1,5 @@
 use serde::Serialize;
-use std::path::Path;
+use std::path::{Component, Path, PathBuf};
 use walkdir::WalkDir;
 
 /// 与 macOS scanner 的 SUPPORTED_EXTS 保持一致,外加 lrc。
@@ -66,6 +66,26 @@ pub fn build_manifest(root: &Path) -> Manifest {
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_else(|| "Music".into());
     Manifest { version: 1, library_name, files }
+}
+
+/// 把客户端给的相对路径安全地解析成曲库根内的绝对路径。
+/// 拒绝 `..`、绝对路径、Windows 盘符前缀;canonicalize 后必须仍在根目录内。
+/// 任何不安全或不存在的情况返回 None。
+pub fn resolve_safe_path(root: &Path, rel: &str) -> Option<PathBuf> {
+    let rel_path = PathBuf::from(rel);
+    let unsafe_component = rel_path.components().any(|c| {
+        matches!(c, Component::ParentDir | Component::RootDir | Component::Prefix(_))
+    });
+    if unsafe_component {
+        return None;
+    }
+    let full = root.join(&rel_path);
+    let canon_full = full.canonicalize().ok()?;
+    let canon_root = root.canonicalize().ok()?;
+    if !canon_full.starts_with(&canon_root) {
+        return None;
+    }
+    Some(canon_full)
 }
 
 #[cfg(test)]
@@ -141,5 +161,32 @@ mod tests {
         std::fs::create_dir(&sub).unwrap();
         let m = build_manifest(&sub);
         assert_eq!(m.library_name, "MyMusic");
+    }
+
+    #[test]
+    fn resolve_normal_file_in_root() {
+        let dir = tempdir().unwrap();
+        write(dir.path(), "Anime/song.mp3", b"x");
+        let resolved = resolve_safe_path(dir.path(), "Anime/song.mp3");
+        assert!(resolved.is_some());
+    }
+
+    #[test]
+    fn resolve_rejects_parent_traversal() {
+        let dir = tempdir().unwrap();
+        assert!(resolve_safe_path(dir.path(), "../secret.mp3").is_none());
+        assert!(resolve_safe_path(dir.path(), "a/../../secret.mp3").is_none());
+    }
+
+    #[test]
+    fn resolve_rejects_absolute_path() {
+        let dir = tempdir().unwrap();
+        assert!(resolve_safe_path(dir.path(), "/etc/passwd").is_none());
+    }
+
+    #[test]
+    fn resolve_missing_file_is_none() {
+        let dir = tempdir().unwrap();
+        assert!(resolve_safe_path(dir.path(), "nope.mp3").is_none());
     }
 }
