@@ -4,6 +4,7 @@ pub mod lyrics;
 pub mod scanner;
 pub mod player;
 pub mod cover_fetch;
+pub mod sync_server;
 
 /// On macOS, set the dock icon at runtime so dev builds (which run an
 /// unbundled binary) get the same vinyl artwork as the production .app.
