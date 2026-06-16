@@ -1,5 +1,12 @@
+use axum::extract::{Path as AxumPath, State};
+use axum::http::{header, StatusCode};
+use axum::response::{IntoResponse, Response};
+use axum::routing::get;
+use axum::{Json, Router};
+use parking_lot::Mutex;
 use serde::Serialize;
 use std::path::{Component, Path, PathBuf};
+use std::sync::Arc;
 use walkdir::WalkDir;
 
 /// 与 macOS scanner 的 SUPPORTED_EXTS 保持一致,外加 lrc。
@@ -66,6 +73,77 @@ pub fn build_manifest(root: &Path) -> Manifest {
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_else(|| "Music".into());
     Manifest { version: 1, library_name, files }
+}
+
+/// 服务端共享状态:曲库根可变(用户换曲库时更新),handler 每次请求读当前值。
+#[derive(Clone)]
+pub struct ServerState {
+    pub root: Arc<Mutex<PathBuf>>,
+}
+
+/// 服务句柄:drop 或调用 stop() 时优雅关闭 HTTP 服务。
+pub struct ServerHandle {
+    pub port: u16,
+    shutdown: Option<tokio::sync::oneshot::Sender<()>>,
+}
+
+impl ServerHandle {
+    pub fn stop(mut self) {
+        if let Some(tx) = self.shutdown.take() {
+            let _ = tx.send(());
+        }
+    }
+}
+
+async fn serve_manifest(State(state): State<ServerState>) -> Json<Manifest> {
+    let root = state.root.lock().clone();
+    Json(build_manifest(&root))
+}
+
+async fn serve_file(State(state): State<ServerState>, AxumPath(rel): AxumPath<String>) -> Response {
+    let root = state.root.lock().clone();
+    match resolve_safe_path(&root, &rel) {
+        Some(full) => match tokio::fs::read(&full).await {
+            Ok(bytes) => (
+                [(header::CONTENT_TYPE, "application/octet-stream")],
+                bytes,
+            )
+                .into_response(),
+            Err(_) => StatusCode::NOT_FOUND.into_response(),
+        },
+        None => StatusCode::FORBIDDEN.into_response(),
+    }
+}
+
+pub fn router(state: ServerState) -> Router {
+    Router::new()
+        .route("/manifest", get(serve_manifest))
+        .route("/files/*path", get(serve_file))
+        .with_state(state)
+}
+
+/// 从 preferred_port 起尝试绑定,占用则向上顺延 20 个端口。
+/// 成功后在 tokio runtime 上 spawn 服务,返回实际端口 + 句柄。
+pub async fn start(state: ServerState, preferred_port: u16) -> anyhow::Result<ServerHandle> {
+    let mut bound: Option<(tokio::net::TcpListener, u16)> = None;
+    for p in preferred_port..preferred_port.saturating_add(20) {
+        if let Ok(l) = tokio::net::TcpListener::bind(("0.0.0.0", p)).await {
+            bound = Some((l, p));
+            break;
+        }
+    }
+    let (listener, port) =
+        bound.ok_or_else(|| anyhow::anyhow!("no free port near {preferred_port}"))?;
+    let app = router(state);
+    let (tx, rx) = tokio::sync::oneshot::channel::<()>();
+    tokio::spawn(async move {
+        let _ = axum::serve(listener, app)
+            .with_graceful_shutdown(async {
+                let _ = rx.await;
+            })
+            .await;
+    });
+    Ok(ServerHandle { port, shutdown: Some(tx) })
 }
 
 /// 把客户端给的相对路径安全地解析成曲库根内的绝对路径。
@@ -188,5 +266,44 @@ mod tests {
     fn resolve_missing_file_is_none() {
         let dir = tempdir().unwrap();
         assert!(resolve_safe_path(dir.path(), "nope.mp3").is_none());
+    }
+
+    fn test_state(root: &Path) -> ServerState {
+        ServerState { root: Arc::new(Mutex::new(root.to_path_buf())) }
+    }
+
+    #[tokio::test]
+    async fn manifest_endpoint_returns_files() {
+        let dir = tempdir().unwrap();
+        write(dir.path(), "a.mp3", b"hello");
+        let handle = start(test_state(dir.path()), 18737).await.unwrap();
+        let url = format!("http://127.0.0.1:{}/manifest", handle.port);
+        let body: serde_json::Value = reqwest::get(&url).await.unwrap().json().await.unwrap();
+        assert_eq!(body["version"], 1);
+        assert_eq!(body["files"][0]["path"], "a.mp3");
+        assert_eq!(body["files"][0]["size"], 5);
+        handle.stop();
+    }
+
+    #[tokio::test]
+    async fn file_endpoint_serves_bytes() {
+        let dir = tempdir().unwrap();
+        write(dir.path(), "a.mp3", b"hello");
+        let handle = start(test_state(dir.path()), 18760).await.unwrap();
+        let url = format!("http://127.0.0.1:{}/files/a.mp3", handle.port);
+        let bytes = reqwest::get(&url).await.unwrap().bytes().await.unwrap();
+        assert_eq!(&bytes[..], b"hello");
+        handle.stop();
+    }
+
+    #[tokio::test]
+    async fn file_endpoint_rejects_traversal() {
+        let dir = tempdir().unwrap();
+        write(dir.path(), "a.mp3", b"hello");
+        let handle = start(test_state(dir.path()), 18780).await.unwrap();
+        let url = format!("http://127.0.0.1:{}/files/..%2f..%2fetc%2fpasswd", handle.port);
+        let status = reqwest::get(&url).await.unwrap().status();
+        assert!(status.is_client_error(), "expected 4xx, got {status}");
+        handle.stop();
     }
 }
