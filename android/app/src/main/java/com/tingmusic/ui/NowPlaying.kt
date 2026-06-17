@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -85,8 +86,10 @@ fun NowPlayingPanel(
 /** 同步歌词:解析当前曲目的 .lrc,按 position 高亮+居中。 */
 @Composable
 fun LyricsView(track: Track?, positionMs: Long, modifier: Modifier = Modifier) {
-    val lrc = track?.lrcFile
-    val lyrics = if (lrc != null && lrc.isFile) runCatching { LrcParser.parse(lrc.readText()) }.getOrNull() else null
+    val lyrics = remember(track) {
+        val lrc = track?.lrcFile
+        if (lrc != null && lrc.isFile) runCatching { LrcParser.parse(lrc.readText()) }.getOrNull() else null
+    }
     when (lyrics) {
         is Lyrics.Synced -> {
             val lines = lyrics.lines

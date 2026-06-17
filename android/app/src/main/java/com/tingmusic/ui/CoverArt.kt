@@ -27,6 +27,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** 异步取内嵌封面(IO);无则返回 null。 */
 @Composable
@@ -34,17 +36,19 @@ fun rememberEmbeddedCover(file: File?): ImageBitmap? {
     val bmp by produceState<ImageBitmap?>(initialValue = null, key1 = file?.absolutePath) {
         value = null
         val f = file ?: return@produceState
-        value = runCatching {
-            val mmr = MediaMetadataRetriever()
-            try {
-                mmr.setDataSource(f.absolutePath)
-                mmr.embeddedPicture?.let { bytes ->
-                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                val mmr = MediaMetadataRetriever()
+                try {
+                    mmr.setDataSource(f.absolutePath)
+                    mmr.embeddedPicture?.let { bytes ->
+                        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+                    }
+                } finally {
+                    runCatching { mmr.release() }
                 }
-            } finally {
-                runCatching { mmr.release() }
-            }
-        }.getOrNull()
+            }.getOrNull()
+        }
     }
     return bmp
 }

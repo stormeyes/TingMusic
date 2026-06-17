@@ -92,11 +92,10 @@ fun SyncScreen(
             TextButton(onClick = { showLyrics = true }) { Text(if (showLyrics) "● 歌词" else "歌词") }
         }
 
-        Text("曲库(${s.tracks.size})", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(vertical = 8.dp))
-
         if (showLyrics) {
             LyricsView(currentTrack, livePositionMs, Modifier.fillMaxSize())
         } else {
+            Text("曲库(${s.tracks.size})", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(vertical = 8.dp))
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(s.tracks, key = { it.id }) { t ->
                     Column(
