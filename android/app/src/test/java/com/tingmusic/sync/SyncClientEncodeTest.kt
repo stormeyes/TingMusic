@@ -22,8 +22,7 @@ class SyncClientEncodeTest {
 
     @Test
     fun encodesUnicode() {
-        // 群青 -> UTF-8 percent-encoded; just assert it round-trips through decode.
         val enc = SyncClient.encodePath("群青 - YOASOBI.flac")
-        assertEquals("群青 - YOASOBI.flac", java.net.URLDecoder.decode(enc.replace("/", "%2F"), "UTF-8").replace("%2F", "/"))
+        assertEquals("群青 - YOASOBI.flac", java.net.URLDecoder.decode(enc, "UTF-8"))
     }
 }

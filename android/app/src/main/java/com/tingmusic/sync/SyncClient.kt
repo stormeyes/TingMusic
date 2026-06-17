@@ -32,12 +32,17 @@ class SyncClient(
             val body = resp.body ?: error("empty body for $relPath")
             dest.parentFile?.mkdirs()
             val part = File(dest.parentFile, dest.name + ".part")
-            body.byteStream().use { input ->
-                part.outputStream().use { out -> input.copyTo(out, bufferSize = 64 * 1024) }
-            }
-            if (!part.renameTo(dest)) {
-                part.copyTo(dest, overwrite = true)
-                part.delete()
+            try {
+                body.byteStream().use { input ->
+                    part.outputStream().use { out -> input.copyTo(out, bufferSize = 64 * 1024) }
+                }
+                if (!part.renameTo(dest)) {
+                    part.copyTo(dest, overwrite = true)
+                }
+            } finally {
+                // On success renameTo consumed `part`; otherwise (partial write,
+                // copy fallback, or thrown exception) remove the leftover.
+                if (part.exists()) part.delete()
             }
         }
     }
@@ -48,6 +53,8 @@ class SyncClient(
         /**
          * 逐段 percent-encode 相对路径,保留 `/` 分隔符。空格编码为 %20(不是 +)。
          * 对应 Mac 端 axum `/files/{*path}` 的解码方式(spec §4.5)。
+         *
+         * @param rel 来自 manifest 的**原始**(未编码)相对路径;不要传入已编码的路径(会被二次编码)。
          */
         fun encodePath(rel: String): String =
             rel.split('/').joinToString("/") { seg ->
