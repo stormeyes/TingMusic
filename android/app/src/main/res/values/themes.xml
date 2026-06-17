@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose (MaterialTheme) drives the actual UI colors and dark/light.
+         This platform theme only needs to give a clean no-action-bar window
+         that exists on every API >= 26. -->
+    <style name="Theme.TingMusic" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

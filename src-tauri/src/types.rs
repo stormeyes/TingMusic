@@ -79,6 +79,12 @@ pub struct Config {
     pub cover_shape: CoverShape,
     #[serde(default)]
     pub theme: Theme,
+    #[serde(default = "default_true")]
+    pub lan_sync: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -111,6 +117,7 @@ impl Default for Config {
             mode: Mode::Sequential,
             cover_shape: CoverShape::Circle,
             theme: Theme::Default,
+            lan_sync: true,
         }
     }
 }
@@ -160,6 +167,14 @@ mod tests {
     fn mode_serializes_lowercase() {
         let s = serde_json::to_string(&Mode::RepeatOne).unwrap();
         assert_eq!(s, "\"repeatone\"");
+    }
+
+    #[test]
+    fn lan_sync_defaults_true_when_absent() {
+        // 老配置文件没有 lan_sync 字段时,应默认 true。
+        let json = r#"{"folder":null,"volume":0.7,"mode":"sequential"}"#;
+        let cfg: Config = serde_json::from_str(json).unwrap();
+        assert!(cfg.lan_sync);
     }
 
     #[test]

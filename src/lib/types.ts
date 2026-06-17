@@ -32,4 +32,13 @@ export interface Config {
   mode: Mode;
   cover_shape: CoverShape;
   theme: Theme;
+  lan_sync: boolean;
 }
+
+export interface LanSyncStatus {
+  enabled: boolean;
+  address: string | null;
+}
+
+/** saveConfig 不带 lan_sync —— 它由 setLanSync 独立管理,后端会保留已有值。 */
+export type SaveableConfig = Omit<Config, "lan_sync">;

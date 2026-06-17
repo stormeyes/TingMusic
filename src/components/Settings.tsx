@@ -39,6 +39,29 @@ export default function Settings() {
   const setSettingsOpen = useStore((s) => s.setSettingsOpen);
   const wrapRef = useRef<HTMLDivElement>(null);
   const saveTimer = useRef<number | null>(null);
+  const [lanSync, setLanSync] = useState(false);
+  const [lanAddr, setLanAddr] = useState<string | null>(null);
+
+  // 菜单打开时拉一次同步状态(地址依赖服务是否已起,实时性够用)。
+  useEffect(() => {
+    if (!menuOpen) return;
+    api.lanSyncStatus()
+      .then((st) => { setLanSync(st.enabled); setLanAddr(st.address); })
+      .catch(() => {});
+  }, [menuOpen]);
+
+  const toggleLanSync = async (next: boolean) => {
+    if (next === lanSync) return;
+    setLanSync(next);
+    try {
+      await api.setLanSync(next);
+      const st = await api.lanSyncStatus();
+      setLanSync(st.enabled);
+      setLanAddr(st.address);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   // Mirror local menuOpen into the store so App.tsx can resize the window.
   useEffect(() => { setSettingsOpen(menuOpen); }, [menuOpen, setSettingsOpen]);
@@ -177,6 +200,24 @@ export default function Settings() {
               </button>
             ))}
           </div>
+          <div className="settings-divider" />
+          <div className="settings-section-label">局域网同步</div>
+          <div className="settings-pill-row">
+            {([["on", true], ["off", false]] as [string, boolean][]).map(([key, val]) => (
+              <button
+                key={key}
+                role="menuitemradio"
+                aria-checked={lanSync === val}
+                className={`settings-pill ${lanSync === val ? "active" : ""}`}
+                onClick={() => toggleLanSync(val)}
+              >
+                {val ? "开启" : "关闭"}
+              </button>
+            ))}
+          </div>
+          {lanSync && lanAddr && (
+            <div className="settings-section-label">本机 {lanAddr}</div>
+          )}
           <div className="settings-divider" />
           <button
             role="menuitem"
