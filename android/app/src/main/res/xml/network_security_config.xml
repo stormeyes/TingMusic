@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  v1 同步只在局域网内走明文 HTTP(Mac 端是裸 HTTP 服务)。允许 cleartext。
+  应用只会连接用户局域网内的 TingMusic 服务,不访问公网明文站点。
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
