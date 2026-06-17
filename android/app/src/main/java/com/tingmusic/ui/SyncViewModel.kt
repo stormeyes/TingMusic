@@ -29,7 +29,7 @@ data class UiState(
 )
 
 class SyncViewModel(app: Application) : AndroidViewModel(app) {
-    private val mirrorRoot: File = File(app.getExternalFilesDir("Music") ?: app.filesDir, "")
+    private val mirrorRoot: File = app.getExternalFilesDir("Music") ?: app.filesDir
     private val stateStore = SyncStateStore(File(app.filesDir, "sync_state.json"))
     private val client = SyncClient()
     private val engine = SyncEngine(client, stateStore, mirrorRoot)
@@ -40,7 +40,7 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
 
     private var discoveryJob: Job? = null
 
-    init { refreshLibrary() }
+    init { viewModelScope.launch { refreshLibrary() } }
 
     fun setManualHost(host: String) { _state.value = _state.value.copy(manualHost = host) }
 
@@ -65,8 +65,8 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
             engine.sync(baseUrl) { p ->
                 _state.value = _state.value.copy(progress = p)
             }
-            refreshLibrary()
-            _state.value = _state.value.copy(syncing = false)
+            refreshLibrary()                                  // suspends until re-indexed
+            _state.value = _state.value.copy(syncing = false) // clear only after the list is updated
         }
     }
 
@@ -75,10 +75,8 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
         return if (h.startsWith("http")) h else "http://$h:8737"
     }
 
-    private fun refreshLibrary() {
-        viewModelScope.launch {
-            val tracks = withContext(Dispatchers.IO) { indexer.index() }
-            _state.value = _state.value.copy(tracks = tracks)
-        }
+    private suspend fun refreshLibrary() {
+        val tracks = withContext(Dispatchers.IO) { indexer.index() }
+        _state.value = _state.value.copy(tracks = tracks)
     }
 }
