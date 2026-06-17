@@ -42,6 +42,7 @@ class PlaybackController(private val context: Context) {
     }
 
     fun connect() {
+        if (controller != null) return // guard against double-connect leaking a controller
         val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
         val future = MediaController.Builder(context, token).buildAsync()
         future.addListener({
