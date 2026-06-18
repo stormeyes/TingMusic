@@ -35,6 +35,10 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
     private val engine = SyncEngine(client, stateStore, mirrorRoot)
     private val indexer = LibraryIndexer(mirrorRoot)
 
+    private val settings = com.tingmusic.data.SettingsStore(app)
+    val theme: kotlinx.coroutines.flow.StateFlow<com.tingmusic.ui.theme.AppTheme> = settings.theme
+    fun setTheme(t: com.tingmusic.ui.theme.AppTheme) = settings.setTheme(t)
+
     private val _state = MutableStateFlow(UiState())
     val state: StateFlow<UiState> = _state.asStateFlow()
 
