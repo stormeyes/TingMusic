@@ -55,7 +55,7 @@ fun NowPlayingScreen(
     onSeek: (Long) -> Unit,
     onCycleMode: () -> Unit,
 ) {
-    var lyricsMode by remember { mutableStateOf(false) }
+    var lyricsMode by remember(track.id) { mutableStateOf(false) }
     Surface(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().padding(16.dp)) {
             IconButton(onClick = onClose) { Icon(Icons.Filled.KeyboardArrowDown, "收起") }
@@ -92,11 +92,11 @@ fun LyricsView(track: Track?, positionMs: Long, modifier: Modifier = Modifier) {
         val lrc = track?.lrcFile
         if (lrc != null && lrc.isFile) runCatching { LrcParser.parse(lrc.readText()) }.getOrNull() else null
     }
+    val listState = rememberLazyListState()
     when (lyrics) {
         is Lyrics.Synced -> {
             val lines = lyrics.lines
             val active = LyricsIndex.activeIndex(lines, positionMs)
-            val listState = rememberLazyListState()
             LaunchedEffect(active) { if (active >= 0) listState.animateScrollToItem(active.coerceAtLeast(0)) }
             LazyColumn(state = listState, modifier = modifier.fillMaxWidth()) {
                 items(lines.size) { i ->
