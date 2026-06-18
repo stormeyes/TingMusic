@@ -1,24 +1,24 @@
 package com.tingmusic.ui
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
@@ -28,13 +28,19 @@ import com.tingmusic.library.Track
 
 /** 旋转黑胶:深色胶圈 + 封面(或黑胶占位)+ 右上唱臂(播放落下/暂停抬起)。 */
 @Composable
-fun VinylDisc(track: Track, isPlaying: Boolean, sizeDp: Int = 260) {
-    val cover = rememberCover(track)
-    val transition = rememberInfiniteTransition(label = "spin")
-    val angle by transition.animateFloat(
-        0f, 360f, infiniteRepeatable(tween(20_000, easing = LinearEasing), RepeatMode.Restart), label = "a")
-    // Use graphicsLayer to avoid import collision with DrawScope.rotate
-    val spin = if (isPlaying) Modifier.graphicsLayer { rotationZ = angle } else Modifier
+fun VinylDisc(track: Track, isPlaying: Boolean, cover: ImageBitmap?, sizeDp: Int = 260) {
+    var angle by remember { mutableStateOf(0f) }
+    LaunchedEffect(isPlaying) {
+        if (!isPlaying) return@LaunchedEffect
+        var last = withFrameNanos { it }
+        while (true) {
+            val now = withFrameNanos { it }
+            angle = (angle + (now - last) / 1_000_000_000f / 20f * 360f) % 360f  // 20s / rev
+            last = now
+        }
+    }
+    // always applied; holds angle when paused
+    val spin = Modifier.graphicsLayer { rotationZ = angle }
     // 唱臂角度:播放 -2°(落到碟面),暂停 -22°(抬起)
     val armAngle by animateFloatAsState(if (isPlaying) -2f else -22f, label = "arm")
 

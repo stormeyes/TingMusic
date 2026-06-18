@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -72,7 +73,7 @@ fun NowPlayingScreen(
             IconButton(onClick = onClose) { Icon(Icons.Filled.KeyboardArrowDown, "收起", tint = Color.White) }
             Box(Modifier.weight(1f).fillMaxWidth().clickable { lyricsMode = !lyricsMode },
                 contentAlignment = Alignment.Center) {
-                if (!lyricsMode) VinylDisc(track = track, isPlaying = state.isPlaying, sizeDp = 260)
+                if (!lyricsMode) VinylDisc(track = track, isPlaying = state.isPlaying, cover = bg, sizeDp = 260)
                 else LyricsView(track = track, positionMs = livePositionMs, modifier = Modifier.fillMaxHeight())
             }
             Text(track.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = Color.White)
