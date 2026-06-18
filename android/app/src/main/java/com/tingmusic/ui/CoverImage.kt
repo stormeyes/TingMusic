@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
@@ -72,7 +73,7 @@ fun CoverImage(
         label = "angle",
     )
     val spin = if (vinylFrame && isPlaying) Modifier.rotate(angle) else Modifier
-    Box(modifier.size(sizeDp.dp).clip(CircleShape)) {
+    Box(modifier.size(sizeDp.dp).clip(CircleShape), contentAlignment = Alignment.Center) {
         if (cover != null) {
             if (vinylFrame) {
                 // 封面嵌进黑胶圈:外圈深色 + 中间封面圆

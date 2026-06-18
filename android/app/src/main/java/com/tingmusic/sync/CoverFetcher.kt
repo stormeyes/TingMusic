@@ -19,9 +19,7 @@ import java.util.concurrent.TimeUnit
  */
 class CoverFetcher(
     private val context: Context,
-    private val client: OkHttpClient = OkHttpClient.Builder()
-        .callTimeout(8, TimeUnit.SECONDS)
-        .build(),
+    private val client: OkHttpClient = sharedClient,
 ) {
     /** 命中缓存或联网取;失败返回 null(调用方回落黑胶)。 */
     suspend fun fetch(title: String, artist: String, trackId: String): ImageBitmap? =
@@ -61,6 +59,10 @@ class CoverFetcher(
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
 
     companion object {
+        private val sharedClient: OkHttpClient by lazy {
+            OkHttpClient.Builder().callTimeout(8, TimeUnit.SECONDS).build()
+        }
+
         fun searchTerm(title: String, artist: String): String {
             val t = title.trim()
             val a = artist.trim()
