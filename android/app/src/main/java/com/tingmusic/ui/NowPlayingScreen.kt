@@ -1,10 +1,13 @@
 package com.tingmusic.ui
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -20,7 +23,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -31,6 +33,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.tingmusic.library.LrcParser
@@ -56,30 +61,32 @@ fun NowPlayingScreen(
     onCycleMode: () -> Unit,
 ) {
     var lyricsMode by remember(track.id) { mutableStateOf(false) }
-    Surface(Modifier.fillMaxSize()) {
+    val bg = rememberCover(track)  // internal, from CoverImage.kt
+    Box(Modifier.fillMaxSize()) {
+        if (bg != null) {
+            Image(bg, null, contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().blur(28.dp))  // API<31 no blur, scrim darkens
+        }
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)))
         Column(Modifier.fillMaxSize().padding(16.dp)) {
-            IconButton(onClick = onClose) { Icon(Icons.Filled.KeyboardArrowDown, "收起") }
-            // 中央:点击在碟 / 歌词间切换(Task 4 把碟做成旋转黑胶+唱臂+模糊背景)
+            IconButton(onClick = onClose) { Icon(Icons.Filled.KeyboardArrowDown, "收起", tint = Color.White) }
             Box(Modifier.weight(1f).fillMaxWidth().clickable { lyricsMode = !lyricsMode },
                 contentAlignment = Alignment.Center) {
-                if (!lyricsMode) {
-                    CoverImage(track = track, isPlaying = state.isPlaying, sizeDp = 260, vinylFrame = true)
-                } else {
-                    LyricsView(track = track, positionMs = livePositionMs)
-                }
+                if (!lyricsMode) VinylDisc(track = track, isPlaying = state.isPlaying, sizeDp = 260)
+                else LyricsView(track = track, positionMs = livePositionMs, modifier = Modifier.fillMaxHeight())
             }
-            Text(track.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text(track.artist, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(track.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = Color.White)
+            Text(track.artist, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.8f))
             val dur = if (state.durationMs > 0) state.durationMs else track.durationMs
             Slider(value = if (dur > 0) (livePositionMs.toFloat() / dur) else 0f, onValueChange = { onSeek((it * dur).toLong()) })
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("${fmt(livePositionMs)} / ${fmt(dur)}", style = MaterialTheme.typography.bodySmall)
+                Text("${fmt(livePositionMs)} / ${fmt(dur)}", style = MaterialTheme.typography.bodySmall, color = Color.White)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onPrev) { Icon(Icons.Filled.SkipPrevious, "上一首") }
-                    IconButton(onClick = onToggle) { if (state.isPlaying) Icon(Icons.Filled.Pause, "暂停") else Icon(Icons.Filled.PlayArrow, "播放") }
-                    IconButton(onClick = onNext) { Icon(Icons.Filled.SkipNext, "下一首") }
+                    IconButton(onClick = onPrev) { Icon(Icons.Filled.SkipPrevious, "上一首", tint = Color.White) }
+                    IconButton(onClick = onToggle) { if (state.isPlaying) Icon(Icons.Filled.Pause, "暂停", tint = Color.White) else Icon(Icons.Filled.PlayArrow, "播放", tint = Color.White) }
+                    IconButton(onClick = onNext) { Icon(Icons.Filled.SkipNext, "下一首", tint = Color.White) }
                 }
-                TextButton(onClick = onCycleMode) { Text(modeLabel(state.mode)) }
+                TextButton(onClick = onCycleMode) { Text(modeLabel(state.mode), color = Color.White) }
             }
         }
     }
