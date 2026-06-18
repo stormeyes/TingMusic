@@ -110,12 +110,12 @@ fun LyricsView(track: Track?, positionMs: Long, modifier: Modifier = Modifier) {
                 items(lines.size) { i ->
                     Text(lines[i].text.ifBlank { "♪" },
                         modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp, horizontal = 16.dp),
-                        color = if (i == active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (i == active) Color.White else Color.White.copy(alpha = 0.55f),
                         fontWeight = if (i == active) FontWeight.Bold else FontWeight.Normal)
                 }
             }
         }
-        is Lyrics.Plain -> Text(lyrics.text, modifier.padding(16.dp))
-        null -> Text("无歌词", modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        is Lyrics.Plain -> Text(lyrics.text, modifier.padding(16.dp), color = Color.White.copy(alpha = 0.7f))
+        null -> Text("无歌词", modifier.padding(16.dp), color = Color.White.copy(alpha = 0.7f))
     }
 }
