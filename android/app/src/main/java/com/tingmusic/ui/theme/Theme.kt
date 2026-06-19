@@ -2,48 +2,33 @@ package com.tingmusic.ui.theme
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-enum class AppTheme {
-    DEFAULT,    // 中性灰,红仅作锚点
-    WHITE_RED;  // 白底 + 红强调(网易云外链风)
-
-    companion object {
-        fun fromStored(name: String?): AppTheme =
-            entries.firstOrNull { it.name == name } ?: DEFAULT
-    }
+/** 红黑设计 token(集中,供所有 UI 引用,不走 MaterialTheme 也能直接用)。 */
+object RB {
+    val Bg = Color(0xFF0A0A0A)
+    val MiniBg = Color(0xFF0D0D0D)
+    val DrawerBg = Color(0xFF0F0F0F)
+    val SearchBg = Color(0xFF161616)
+    val Text = Color(0xFFF5F5F5)
+    val TextDim = Color(0x66FFFFFF)   // ~40%
+    val TextWeak = Color(0x47FFFFFF)  // ~28%
+    val Red = Color(0xFFE60026)
+    val Divider = Color(0x0FFFFFFF)   // ~6%
 }
 
-private val Red = Color(0xFFD33A31)
-
-// 默认:暗灰中性,主色用红作锚点
-private val DefaultColors = darkColorScheme(
-    primary = Red,
+private val RedBlackScheme = darkColorScheme(
+    primary = RB.Red,
     onPrimary = Color.White,
-    background = Color(0xFF242424),
-    surface = Color(0xFF2C2C2C),
-    onBackground = Color(0xFFEDEDED),
-    onSurface = Color(0xFFEDEDED),
-    onSurfaceVariant = Color(0xFFAFAFAF),
-)
-
-// 白红:白底,红强调
-private val WhiteRedColors = lightColorScheme(
-    primary = Red,
-    onPrimary = Color.White,
-    background = Color(0xFFFFFFFF),
-    surface = Color(0xFFFFFFFF),
-    onBackground = Color(0xFF1A1A1A),
-    onSurface = Color(0xFF1A1A1A),
-    onSurfaceVariant = Color(0xFF8A8A8A),
+    background = RB.Bg,
+    surface = RB.MiniBg,
+    onBackground = RB.Text,
+    onSurface = RB.Text,
+    onSurfaceVariant = RB.TextDim,
 )
 
 @Composable
-fun TingMusicTheme(theme: AppTheme, content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = if (theme == AppTheme.WHITE_RED) WhiteRedColors else DefaultColors,
-        content = content,
-    )
+fun TingMusicTheme(content: @Composable () -> Unit) {
+    MaterialTheme(colorScheme = RedBlackScheme, content = content)
 }
