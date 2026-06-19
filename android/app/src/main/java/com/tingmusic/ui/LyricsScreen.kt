@@ -29,8 +29,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.ImageBitmap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
@@ -53,12 +59,12 @@ fun LyricsScreen(
     track: Track,
     livePositionMs: Long,
     isPlaying: Boolean,
+    cover: ImageBitmap?,
     onBack: () -> Unit,
     onToggle: () -> Unit,
     onNext: () -> Unit,
     onPrev: () -> Unit,
 ) {
-    val cover = rememberCover(track)
 
     Box(Modifier.fillMaxSize().background(RB.Bg)) {
         // 背景:模糊放大封面 + 暗罩
@@ -101,9 +107,10 @@ fun LyricsScreen(
             }
 
             // 歌词区
-            val lyrics = remember(track) {
-                track.lrcFile?.takeIf { it.isFile }?.let {
-                    runCatching { LrcParser.parse(it.readText()) }.getOrNull()
+            var lyrics by remember(track) { mutableStateOf<com.tingmusic.library.Lyrics?>(null) }
+            LaunchedEffect(track) {
+                lyrics = withContext(Dispatchers.IO) {
+                    track.lrcFile?.takeIf { it.isFile }?.let { runCatching { LrcParser.parse(it.readText()) }.getOrNull() }
                 }
             }
 
@@ -116,9 +123,10 @@ fun LyricsScreen(
                         interactionSource = remember { MutableInteractionSource() },
                     ) { onBack() },
             ) {
-                when (lyrics) {
+                val lyricsSnap = lyrics
+                when (lyricsSnap) {
                     is Lyrics.Synced -> {
-                        val lines = lyrics.lines
+                        val lines = lyricsSnap.lines
                         val active = LyricsIndex.activeIndex(lines, livePositionMs)
                         val listState = rememberLazyListState()
                         LaunchedEffect(active) {
@@ -147,7 +155,7 @@ fun LyricsScreen(
                     is Lyrics.Plain -> {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text(
-                                lyrics.text,
+                                lyricsSnap.text,
                                 color = RB.TextDim,
                                 fontSize = 15.sp,
                                 textAlign = TextAlign.Center,

@@ -80,31 +80,33 @@ fun PlaylistScreen(
         }
 
         // 播放全部行
-        Column {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .padding(bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+        if (tracks.isNotEmpty()) {
+            Column {
                 Row(
-                    Modifier.clickable { onPlayAll() },
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .padding(bottom = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    RedCirclePlay(24)
-                    Spacer(Modifier.width(9.dp))
-                    Text("播放全部", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = RB.Text)
-                    Spacer(Modifier.width(6.dp))
-                    Text("(${tracks.size})", fontSize = 13.sp, color = RB.TextWeak)
+                    Row(
+                        Modifier.clickable { onPlayAll() },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RedCirclePlay(24)
+                        Spacer(Modifier.width(9.dp))
+                        Text("播放全部", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = RB.Text)
+                        Spacer(Modifier.width(6.dp))
+                        Text("(${tracks.size})", fontSize = 13.sp, color = RB.TextWeak)
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Icon(
+                        Icons.AutoMirrored.Filled.Sort, null,
+                        tint = RB.TextDim, modifier = Modifier.size(20.dp),
+                    )
                 }
-                Spacer(Modifier.weight(1f))
-                Icon(
-                    Icons.AutoMirrored.Filled.Sort, null,
-                    tint = RB.TextDim, modifier = Modifier.size(20.dp),
-                )
+                HorizontalDivider(color = RB.Divider)
             }
-            HorizontalDivider(color = RB.Divider)
         }
 
         if (tracks.isEmpty()) {

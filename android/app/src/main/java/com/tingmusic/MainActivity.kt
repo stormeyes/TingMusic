@@ -26,12 +26,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tingmusic.playback.PlaybackController
+import androidx.compose.ui.graphics.ImageBitmap
 import com.tingmusic.ui.DrawerContent
 import com.tingmusic.ui.LyricsScreen
 import com.tingmusic.ui.MiniPlayer
 import com.tingmusic.ui.PlayerScreen
 import com.tingmusic.ui.PlaylistScreen
 import com.tingmusic.ui.SyncViewModel
+import com.tingmusic.ui.rememberCover
 import com.tingmusic.ui.theme.TingMusicTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -51,13 +53,16 @@ class MainActivity : ComponentActivity() {
                 var screen by remember { mutableStateOf("list") } // list | player | lyrics
                 var livePos by remember { mutableLongStateOf(0L) }
                 LaunchedEffect(pstate.isPlaying, pstate.currentId) {
-                    while (true) { livePos = playback.currentPositionMs(); delay(300) }
+                    livePos = playback.currentPositionMs()
+                    if (!pstate.isPlaying) return@LaunchedEffect
+                    while (true) { delay(300); livePos = playback.currentPositionMs() }
                 }
                 LaunchedEffect(ui.tracks) { playback.setLibrary(ui.tracks) }
 
                 val drawerState = rememberDrawerState(DrawerValue.Closed)
                 val scope = rememberCoroutineScope()
                 val current = ui.tracks.find { it.id == pstate.currentId }
+                val cover = rememberCover(current)
                 val dur = if (pstate.durationMs > 0) pstate.durationMs else (current?.durationMs ?: 0L)
                 val progress = if (dur > 0) (livePos.toFloat() / dur) else 0f
 
@@ -93,7 +98,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     current?.let { c ->
                         PlayerScreen(
-                            track = c, state = pstate, livePositionMs = livePos,
+                            track = c, state = pstate, livePositionMs = livePos, cover = cover,
                             onClose = { screen = "list" },
                             onOpenLyrics = { screen = "lyrics" },
                             onToggle = { playback.togglePlayPause() },
@@ -108,7 +113,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     current?.let { c ->
                         LyricsScreen(
-                            track = c, livePositionMs = livePos, isPlaying = pstate.isPlaying,
+                            track = c, livePositionMs = livePos, isPlaying = pstate.isPlaying, cover = cover,
                             onBack = { screen = "player" },
                             onToggle = { playback.togglePlayPause() },
                             onNext = { playback.next() }, onPrev = { playback.prev() },

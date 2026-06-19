@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -56,6 +57,7 @@ fun PlayerScreen(
     track: Track,
     state: PlaybackState,
     livePositionMs: Long,
+    cover: ImageBitmap?,
     onClose: () -> Unit,
     onOpenLyrics: () -> Unit,
     onToggle: () -> Unit,
@@ -64,7 +66,6 @@ fun PlayerScreen(
     onSeek: (Long) -> Unit,
     onCycleMode: () -> Unit,
 ) {
-    val cover = rememberCover(track)
     val dur = if (state.durationMs > 0) state.durationMs else track.durationMs
 
     Column(
