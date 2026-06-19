@@ -51,7 +51,7 @@ fun VinylDisc(cover: ImageBitmap?, isPlaying: Boolean, sizeDp: Int = 250) {
         }
     }
     // 唱臂:播放=落到碟面(0°),暂停=抬起外移(-28°),绕顶部转轴旋转
-    val arm by animateFloatAsState(if (isPlaying) 0f else -28f, animationSpec = tween(550), label = "arm")
+    val arm by animateFloatAsState(if (isPlaying) 0f else -78f, animationSpec = tween(550), label = "arm")
 
     // 容器高 = 唱片宽 × 1.32,唱片底对齐,顶部留空给唱臂转轴
     Box(
