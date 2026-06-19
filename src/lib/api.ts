@@ -16,4 +16,5 @@ export const api = {
     invoke<string | null>("fetch_cover", { trackId, title, artist }),
   lanSyncStatus: () => invoke<LanSyncStatus>("lan_sync_status"),
   setLanSync: (enabled: boolean) => invoke<void>("set_lan_sync", { enabled }),
+  setAlwaysOnTop: (enabled: boolean) => invoke<void>("set_always_on_top", { enabled }),
 };

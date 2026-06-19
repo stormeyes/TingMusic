@@ -71,6 +71,7 @@ mod tests {
             cover_shape: crate::types::CoverShape::Square,
             theme: crate::types::Theme::Whitered,
             lan_sync: true,
+            always_on_top: true,
         };
         write_to(&path, &cfg).unwrap();
         let back = read_from(&path);

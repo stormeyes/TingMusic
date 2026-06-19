@@ -81,6 +81,9 @@ pub struct Config {
     pub theme: Theme,
     #[serde(default = "default_true")]
     pub lan_sync: bool,
+    /// 窗口是否固定在最上层(浮在其他应用之上)。默认开。
+    #[serde(default = "default_true")]
+    pub always_on_top: bool,
 }
 
 fn default_true() -> bool {
@@ -118,6 +121,7 @@ impl Default for Config {
             cover_shape: CoverShape::Circle,
             theme: Theme::Default,
             lan_sync: true,
+            always_on_top: true,
         }
     }
 }
