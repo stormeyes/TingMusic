@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlaylistPlay
+import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -83,7 +83,7 @@ fun MiniPlayer(
 
             // 队列图标(装饰)
             Icon(
-                Icons.Filled.PlaylistPlay, null,
+                Icons.AutoMirrored.Filled.PlaylistPlay, null,
                 tint = RB.TextDim, modifier = Modifier.size(21.dp),
             )
         }
