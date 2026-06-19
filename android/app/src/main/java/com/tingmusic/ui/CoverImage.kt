@@ -35,7 +35,7 @@ import kotlinx.coroutines.withContext
 
 /** 取封面:内嵌 → iTunes(带缓存)→ null。全程 IO 线程。 */
 @Composable
-internal fun rememberCover(track: Track?): ImageBitmap? {
+fun rememberCover(track: Track?): ImageBitmap? {
     val context = LocalContext.current
     val bmp by produceState<ImageBitmap?>(initialValue = null, key1 = track?.id) {
         value = null
