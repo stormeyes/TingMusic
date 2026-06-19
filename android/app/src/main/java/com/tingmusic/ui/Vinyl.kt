@@ -107,9 +107,10 @@ fun VinylDisc(cover: ImageBitmap?, isPlaying: Boolean, sizeDp: Int = 250) {
             val white = Color(0xFFF0F0F0)
             val edge = Color(0xFFBFBFBF)
             // 几何以唱片宽 w 为基准:转轴在唱片顶部上方留空处
-            val pivot = Offset(w * 0.62f, w * 0.10f)
-            val elbow = Offset(w * 0.585f, w * 0.34f)
-            val head = Offset(w * 0.475f, w * 0.52f)  // 落在碟面上部
+            // 转轴(唱柱)水平居中;整条臂保持形状向左平移
+            val pivot = Offset(w * 0.50f, w * 0.10f)
+            val elbow = Offset(w * 0.465f, w * 0.34f)
+            val head = Offset(w * 0.355f, w * 0.52f)  // 落在碟面上部
             rotate(degrees = arm, pivot = pivot) {
                 // 臂杆两段(略带弯)
                 drawLine(white, pivot, elbow, strokeWidth = 6.5f * u, cap = StrokeCap.Round)
