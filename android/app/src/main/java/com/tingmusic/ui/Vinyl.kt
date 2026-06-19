@@ -34,9 +34,9 @@ import androidx.compose.ui.unit.dp
 import com.tingmusic.ui.theme.RB
 
 /**
- * 网易云风黑胶:厚黑胶外圈 + 中心圆形封面(约 0.8)+ 白色长唱臂(顶部转轴在唱片
- * 上方留出距离,长臂伸到碟面)。播放时碟旋转(22s/圈,暂停冻结);唱臂播放落碟、
- * 暂停抬起。容器比唱片高一截,给上方唱臂留空。cover 由调用方传入。
+ * 网易云风黑胶:厚黑胶外圈 + 中心圆形封面 + 白色长唱臂(转轴水平居中、在唱片上方
+ * 留距)。播放:唱针落到唱片中间;暂停:整条臂甩到碟面右外侧。碟播放时 22s/圈旋转,
+ * 暂停冻结角度。容器比唱片宽/高一些,给唱臂转轴和甩出留空间。cover 由调用方传入。
  */
 @Composable
 fun VinylDisc(cover: ImageBitmap?, isPlaying: Boolean, sizeDp: Int = 250) {
@@ -50,15 +50,15 @@ fun VinylDisc(cover: ImageBitmap?, isPlaying: Boolean, sizeDp: Int = 250) {
             last = now
         }
     }
-    // 唱臂:播放=落到碟面(0°),暂停=抬起外移(-28°),绕顶部转轴旋转
-    val arm by animateFloatAsState(if (isPlaying) 0f else -78f, animationSpec = tween(550), label = "arm")
+    // 唱臂:播放=唱针落碟心(0°),暂停=甩出碟外右侧(-55°),绕居中转轴旋转
+    val arm by animateFloatAsState(if (isPlaying) 0f else -68f, animationSpec = tween(550), label = "arm")
 
-    // 容器高 = 唱片宽 × 1.32,唱片底对齐,顶部留空给唱臂转轴
+    // 容器:宽 = 唱片 ×1.30(给唱臂左右留空),高 = ×1.32(给转轴上方留空);唱片底部居中
     Box(
-        Modifier.width(sizeDp.dp).height((sizeDp * 1.32f).dp),
+        Modifier.width((sizeDp * 1.30f).dp).height((sizeDp * 1.32f).dp),
         contentAlignment = Alignment.BottomCenter,
     ) {
-        // ── 旋转的黑胶 + 封面(底部对齐,占容器下方正方形)──
+        // ── 旋转的黑胶 + 封面 ──
         Box(
             Modifier.size(sizeDp.dp).graphicsLayer { rotationZ = angle },
             contentAlignment = Alignment.Center,
@@ -100,27 +100,26 @@ fun VinylDisc(cover: ImageBitmap?, isPlaying: Boolean, sizeDp: Int = 250) {
             }
         }
 
-        // ── 白色长唱臂,占满整个容器(转轴在唱片上方,留出距离),绕转轴旋转 ──
+        // ── 白色长唱臂(几何按唱片计算),绕居中转轴旋转 ──
         Canvas(Modifier.fillMaxSize()) {
-            val w = size.width            // = sizeDp
-            val u = w / 250f
+            val discD = size.height / 1.32f          // 唱片直径
+            val u = discD / 250f
+            val cx = size.width / 2f                 // 水平中心(转轴在此,唱片也居中)
+            val discTop = size.height - discD
+            val discCenterY = size.height - discD / 2f
             val white = Color(0xFFF0F0F0)
             val edge = Color(0xFFBFBFBF)
-            // 几何以唱片宽 w 为基准:转轴在唱片顶部上方留空处
-            // 转轴(唱柱)水平居中;整条臂保持形状向左平移
-            val pivot = Offset(w * 0.50f, w * 0.10f)
-            val elbow = Offset(w * 0.465f, w * 0.34f)
-            val head = Offset(w * 0.355f, w * 0.52f)  // 落在碟面上部
+            val pivot = Offset(cx, discTop - discD * 0.12f)          // 转轴:唱片上方留距
+            val elbow = Offset(cx - discD * 0.015f, pivot.y + (discCenterY - pivot.y) * 0.55f)
+            val head = Offset(cx - discD * 0.04f, discCenterY - discD * 0.06f)  // 唱针:落在唱片中间
             rotate(degrees = arm, pivot = pivot) {
-                // 臂杆两段(略带弯)
                 drawLine(white, pivot, elbow, strokeWidth = 6.5f * u, cap = StrokeCap.Round)
                 drawLine(white, elbow, head, strokeWidth = 6.5f * u, cap = StrokeCap.Round)
-                // 转轴底座
                 drawCircle(white, 13f * u, pivot)
                 drawCircle(edge, 13f * u, pivot, style = Stroke(1.5f))
                 drawCircle(Color(0xFF9A9A9A), 4.5f * u, pivot)
-                // 唱头卡座(白色圆角矩形,沿臂尾方向略转)
-                rotate(degrees = 28f, pivot = head) {
+                // 唱头卡座
+                rotate(degrees = 22f, pivot = head) {
                     drawRoundRect(
                         white,
                         topLeft = Offset(head.x - 9f * u, head.y - 3f * u),
