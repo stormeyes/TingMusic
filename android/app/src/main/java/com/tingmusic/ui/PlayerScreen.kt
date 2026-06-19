@@ -33,12 +33,17 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -74,8 +79,13 @@ fun PlayerScreen(
     onCycleMode: () -> Unit,
 ) {
     val dur = if (state.durationMs > 0) state.durationMs else track.durationMs
+    // Seek drag state: while dragging we track a local value and only commit the
+    // seek on release — committing every frame causes a seek-storm that flickers
+    // isPlaying false (tonearm lifts + playback pauses).
+    var dragging by remember { mutableStateOf(false) }
+    var dragValue by remember { mutableFloatStateOf(0f) }
 
-    // Fix 1: blurred cover background + dark scrim
+    // blurred cover background + dark scrim
     Box(Modifier.fillMaxSize().background(RB.Bg)) {
         // Layer 1: blurred cover art
         if (cover != null) {
@@ -88,8 +98,16 @@ fun PlayerScreen(
                     .graphicsLayer { scaleX = 1.2f; scaleY = 1.2f },
             )
         }
-        // Layer 2: dark scrim (~0.76 opacity black)
-        Box(Modifier.fillMaxSize().background(Color(0xC2000000)))
+        // Layer 2: light top→darker bottom gradient so the blurred cover art
+        // covers the black (top stays art-forward), while the bottom darkens
+        // enough for the title/controls to stay readable.
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    listOf(Color(0x40000000), Color(0x59000000), Color(0xB0000000)),
+                ),
+            ),
+        )
         // Layer 3: player UI
         Column(
             Modifier.fillMaxSize(),
@@ -136,7 +154,7 @@ fun PlayerScreen(
                     ) { onOpenLyrics() },
                 contentAlignment = Alignment.Center,
             ) {
-                val discSize = (minOf(maxWidth, maxHeight) * 0.82f)
+                val discSize = (minOf(maxWidth, maxHeight) * 0.74f)
                 VinylDisc(cover = cover, isPlaying = state.isPlaying, sizeDp = discSize.value.toInt())
             }
 
@@ -172,11 +190,13 @@ fun PlayerScreen(
                     Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(fmt(livePositionMs), fontSize = 11.sp, color = RB.TextDim)
-                    // Fix 3: round red 13dp thumb + thin 3dp track
+                    val shownPos = if (dragging) (dragValue * dur).toLong() else livePositionMs
+                    Text(fmt(shownPos), fontSize = 11.sp, color = RB.TextDim)
+                    // round red 13dp thumb + thin 3dp track; commit seek on release only
                     Slider(
-                        value = if (dur > 0) (livePositionMs.toFloat() / dur) else 0f,
-                        onValueChange = { onSeek((it * dur).toLong()) },
+                        value = if (dragging) dragValue else if (dur > 0) (livePositionMs.toFloat() / dur) else 0f,
+                        onValueChange = { dragging = true; dragValue = it },
+                        onValueChangeFinished = { onSeek((dragValue * dur).toLong()); dragging = false },
                         modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
                         colors = SliderDefaults.colors(
                             thumbColor = RB.Red,

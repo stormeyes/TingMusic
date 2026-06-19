@@ -45,8 +45,8 @@ fun VinylDisc(cover: ImageBitmap?, isPlaying: Boolean, sizeDp: Int = 250) {
     val spin = Modifier.graphicsLayer { rotationZ = angle }
     val armAngle by animateFloatAsState(if (isPlaying) 26f else 10f, label = "arm")
 
-    // 容器留出唱臂空间
-    Box(Modifier.size((sizeDp * 1.2f).dp), contentAlignment = Alignment.Center) {
+    // 容器只留少量唱臂空间(让唱片近铺满)
+    Box(Modifier.size((sizeDp * 1.06f).dp), contentAlignment = Alignment.Center) {
         // 凹槽碟体
         Canvas(Modifier.size(sizeDp.dp).then(spin)) {
             val r = size.minDimension / 2f
@@ -97,7 +97,7 @@ fun VinylDisc(cover: ImageBitmap?, isPlaying: Boolean, sizeDp: Int = 250) {
             )
         }
         // 唱臂:支点在容器右上,绕支点旋转
-        Canvas(Modifier.size((sizeDp * 1.2f).dp)) {
+        Canvas(Modifier.size((sizeDp * 1.06f).dp)) {
             val pivot = Offset(size.width * 0.84f, size.height * 0.10f)
             val unit = size.minDimension / 250f  // 把设计的 px 换算到当前尺寸
             rotate(degrees = armAngle, pivot = pivot) {
