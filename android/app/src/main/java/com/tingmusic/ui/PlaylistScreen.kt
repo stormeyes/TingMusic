@@ -1,5 +1,6 @@
 package com.tingmusic.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -14,7 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
@@ -29,6 +30,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -123,42 +126,32 @@ fun PlaylistScreen(
             }
         } else {
             LazyColumn(Modifier.weight(1f)) {
-                itemsIndexed(tracks, key = { _, it -> it.id }) { index, t ->
+                items(tracks, key = { it.id }) { t ->
                     Row(
                         Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 56.dp)
+                            .heightIn(min = 62.dp)
                             .clickable { onPlayTrack(t) }
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        // 左:序号或均衡器
-                        Box(Modifier.width(22.dp), contentAlignment = Alignment.Center) {
-                            if (t.id == currentId && isPlaying) {
-                                EqualizerBars()
-                            } else {
-                                Text(
-                                    "%02d".format(index + 1),
-                                    fontSize = 14.sp,
-                                    color = RB.TextWeak,
-                                )
-                            }
-                        }
+                        // 左:封面缩略图(当前播放叠加均衡器)
+                        TrackThumb(track = t, isCurrent = t.id == currentId, isPlaying = isPlaying)
                         // 中:标题 + 艺术家
                         Column(
                             Modifier
                                 .weight(1f)
-                                .padding(start = 13.dp),
+                                .padding(start = 12.dp),
                         ) {
                             Text(
                                 t.title,
                                 fontSize = 15.sp,
-                                color = if (t.id == currentId) RB.Red else androidx.compose.ui.graphics.Color(0xFFF3F3F3),
+                                color = if (t.id == currentId) RB.Red else Color(0xFFF3F3F3),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
                             Text(
-                                "${t.artist} · ${t.album}",
+                                t.artist,
                                 fontSize = 12.sp,
                                 color = RB.TextDim,
                                 maxLines = 1,
@@ -173,6 +166,36 @@ fun PlaylistScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+/** 列表行缩略图:圆角方形封面;当前正在播放时压暗并叠加均衡器。 */
+@Composable
+private fun TrackThumb(track: Track, isCurrent: Boolean, isPlaying: Boolean) {
+    val cover = rememberCover(track)
+    Box(
+        Modifier
+            .size(46.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .background(RB.SearchBg),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (cover != null) {
+            Image(
+                cover, null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            // 无封面占位:小红点
+            Box(Modifier.size(14.dp).clip(RoundedCornerShape(7.dp)).background(RB.Red))
+        }
+        if (isCurrent && isPlaying) {
+            Box(
+                Modifier.fillMaxSize().background(Color(0x99000000)),
+                contentAlignment = Alignment.Center,
+            ) { EqualizerBars() }
         }
     }
 }

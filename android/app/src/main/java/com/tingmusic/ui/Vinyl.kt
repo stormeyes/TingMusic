@@ -1,6 +1,6 @@
 package com.tingmusic.ui
 
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -50,8 +51,18 @@ fun VinylDisc(cover: ImageBitmap?, isPlaying: Boolean, sizeDp: Int = 250) {
             last = now
         }
     }
-    // 唱臂:播放=唱针落碟心(0°),暂停=甩出碟外右侧(-55°),绕居中转轴旋转
-    val arm by animateFloatAsState(if (isPlaying) 0f else -68f, animationSpec = tween(550), label = "arm")
+    // 唱臂:默认就落在唱片上(播放态,0°),挂载时不做扫入动画 —— 从列表点歌进入
+    // 播放页时 isPlaying 会短暂滞后(先 false 后 true),否则会看到唱臂从外侧扫回。
+    // 只有播放/暂停真正切换时才动画(暂停甩出 -68°、恢复落回 0°)。
+    val armAnim = remember { Animatable(0f) }
+    var prevPlaying by remember { mutableStateOf(isPlaying) }
+    LaunchedEffect(isPlaying) {
+        if (isPlaying != prevPlaying) {
+            prevPlaying = isPlaying
+            armAnim.animateTo(if (isPlaying) 0f else -68f, animationSpec = tween(550))
+        }
+    }
+    val arm = armAnim.value
 
     // 容器:宽 = 唱片 ×1.30(给唱臂左右留空),高 = ×1.32(给转轴上方留空);唱片底部居中
     Box(
