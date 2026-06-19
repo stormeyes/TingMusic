@@ -1,53 +1,174 @@
 package com.tingmusic.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.tingmusic.library.Track
+import com.tingmusic.ui.theme.RB
 
 @Composable
 fun PlaylistScreen(
     tracks: List<Track>,
     currentId: String?,
-    onPlay: (Track) -> Unit,
+    isPlaying: Boolean,
+    onPlayTrack: (Track) -> Unit,
+    onPlayAll: () -> Unit,
+    onOpenDrawer: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (tracks.isEmpty()) {
-        Column(modifier.fillMaxSize().padding(24.dp)) {
-            Text("曲库是空的", style = MaterialTheme.typography.titleMedium)
-            Text("打开左上角抽屉,扫描局域网内的 Mac 同步曲库。",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 8.dp))
-        }
-        return
-    }
-    LazyColumn(modifier.fillMaxSize()) {
-        items(tracks, key = { it.id }) { t ->
+    Column(modifier.fillMaxSize().background(RB.Bg)) {
+        // 顶栏
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onOpenDrawer) {
+                Icon(Icons.Filled.Menu, "菜单", tint = RB.Text, modifier = Modifier.size(22.dp))
+            }
+            // 搜索框(装饰)
             Row(
-                Modifier.fillMaxWidth().clickable { onPlay(t) }.padding(horizontal = 16.dp, vertical = 8.dp),
+                Modifier
+                    .weight(1f)
+                    .height(34.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(RB.SearchBg)
+                    .padding(horizontal = 13.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                CoverImage(track = t, isPlaying = false, sizeDp = 48)
-                Column(Modifier.padding(start = 12.dp).fillMaxWidth()) {
-                    Text(t.title, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        color = if (t.id == currentId) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
-                    Text("${t.artist}${if (t.lrcFile != null) "  · 有歌词" else ""}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Icon(Icons.Filled.Search, null, tint = RB.TextDim, modifier = Modifier.size(15.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("搜索歌曲、歌手、专辑", fontSize = 13.sp, color = RB.TextDim)
+            }
+            Spacer(Modifier.width(4.dp))
+            Icon(Icons.Filled.MoreVert, null, tint = RB.Text, modifier = Modifier.size(22.dp))
+        }
+
+        // 标题块
+        Column(Modifier.padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 6.dp)) {
+            Text("我的曲库", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = RB.Text)
+            Text("本地曲库 · ${tracks.size} 首", fontSize = 12.sp, color = RB.TextDim)
+        }
+
+        // 播放全部行
+        Column {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    Modifier.clickable { onPlayAll() },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RedCirclePlay(24)
+                    Spacer(Modifier.width(9.dp))
+                    Text("播放全部", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = RB.Text)
+                    Spacer(Modifier.width(6.dp))
+                    Text("(${tracks.size})", fontSize = 13.sp, color = RB.TextWeak)
+                }
+                Spacer(Modifier.weight(1f))
+                Icon(
+                    Icons.AutoMirrored.Filled.Sort, null,
+                    tint = RB.TextDim, modifier = Modifier.size(20.dp),
+                )
+            }
+            HorizontalDivider(color = RB.Divider)
+        }
+
+        if (tracks.isEmpty()) {
+            // 空库引导文案
+            Column(
+                Modifier.fillMaxSize().padding(24.dp),
+            ) {
+                Text("曲库是空的", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = RB.Text)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "打开左上角抽屉,扫描局域网内的 Mac 同步曲库。",
+                    fontSize = 14.sp, color = RB.TextDim,
+                )
+            }
+        } else {
+            LazyColumn(Modifier.weight(1f)) {
+                itemsIndexed(tracks, key = { _, it -> it.id }) { index, t ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 56.dp)
+                            .clickable { onPlayTrack(t) }
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        // 左:序号或均衡器
+                        Box(Modifier.width(22.dp), contentAlignment = Alignment.Center) {
+                            if (t.id == currentId && isPlaying) {
+                                EqualizerBars()
+                            } else {
+                                Text(
+                                    "%02d".format(index + 1),
+                                    fontSize = 14.sp,
+                                    color = RB.TextWeak,
+                                )
+                            }
+                        }
+                        // 中:标题 + 艺术家
+                        Column(
+                            Modifier
+                                .weight(1f)
+                                .padding(start = 13.dp),
+                        ) {
+                            Text(
+                                t.title,
+                                fontSize = 15.sp,
+                                color = if (t.id == currentId) RB.Red else androidx.compose.ui.graphics.Color(0xFFF3F3F3),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                "${t.artist} · ${t.album}",
+                                fontSize = 12.sp,
+                                color = RB.TextDim,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        // 右:装饰 ⋮
+                        Icon(
+                            Icons.Filled.MoreVert, null,
+                            tint = RB.TextWeak, modifier = Modifier.size(18.dp),
+                        )
+                    }
                 }
             }
         }
