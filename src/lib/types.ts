@@ -33,6 +33,7 @@ export interface Config {
   cover_shape: CoverShape;
   theme: Theme;
   lan_sync: boolean;
+  always_on_top: boolean;
 }
 
 export interface LanSyncStatus {
@@ -40,5 +41,8 @@ export interface LanSyncStatus {
   address: string | null;
 }
 
-/** saveConfig 不带 lan_sync —— 它由 setLanSync 独立管理,后端会保留已有值。 */
-export type SaveableConfig = Omit<Config, "lan_sync">;
+/**
+ * saveConfig 不带 lan_sync / always_on_top —— 它们由各自的独立命令管理,
+ * 后端在 save_config 里会强制保留已有值。
+ */
+export type SaveableConfig = Omit<Config, "lan_sync" | "always_on_top">;

@@ -64,9 +64,13 @@ fn load_config(state: State<'_, AppState>) -> Config {
 
 #[tauri::command]
 fn save_config(mut cfg: Config, state: State<'_, AppState>) -> Result<(), String> {
-    // lan_sync 由独立命令管理,这里强制保留已有值,避免改音量/模式时被前端的
-    // 默认值覆盖。
-    cfg.lan_sync = state.config.lock().lan_sync;
+    // lan_sync / always_on_top 由独立命令管理,这里强制保留已有值,避免改音量/
+    // 模式时被前端的默认值覆盖。
+    {
+        let cur = state.config.lock();
+        cfg.lan_sync = cur.lan_sync;
+        cfg.always_on_top = cur.always_on_top;
+    }
     if let Some(f) = &cfg.folder {
         *state.library_root.lock() = PathBuf::from(f);
     }
@@ -178,6 +182,20 @@ async fn set_lan_sync(
     Ok(())
 }
 
+#[tauri::command]
+fn set_always_on_top(
+    enabled: bool,
+    window: tauri::WebviewWindow,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    window.set_always_on_top(enabled).map_err(|e| e.to_string())?;
+    let mut cfg = state.config.lock().clone();
+    cfg.always_on_top = enabled;
+    write_to(&state.config_path, &cfg).map_err(|e| e.to_string())?;
+    *state.config.lock() = cfg;
+    Ok(())
+}
+
 fn initial_library_root(cfg: &Config) -> PathBuf {
     if let Some(f) = &cfg.folder {
         return PathBuf::from(f);
@@ -240,6 +258,11 @@ pub fn run() {
             };
             app.manage(state);
 
+            // 应用窗口置顶设置(默认开:浮在其他应用之上)。
+            if let Some(win) = app.get_webview_window("main") {
+                let _ = win.set_always_on_top(cfg.always_on_top);
+            }
+
             // lan_sync 默认开:启动后台同步服务 + mDNS 广播。
             if cfg.lan_sync {
                 let handle = app.handle().clone();
@@ -294,7 +317,7 @@ pub fn run() {
             load_config, save_config, scan_folder,
             play, toggle_pause, next_track, prev_track,
             seek, set_volume, set_mode, fetch_cover,
-            lan_sync_status, set_lan_sync,
+            lan_sync_status, set_lan_sync, set_always_on_top,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

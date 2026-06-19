@@ -41,14 +41,28 @@ export default function Settings() {
   const saveTimer = useRef<number | null>(null);
   const [lanSync, setLanSync] = useState(false);
   const [lanAddr, setLanAddr] = useState<string | null>(null);
+  const [alwaysOnTop, setAlwaysOnTop] = useState(true);
 
-  // 菜单打开时拉一次同步状态(地址依赖服务是否已起,实时性够用)。
+  // 菜单打开时拉一次同步状态(地址依赖服务是否已起,实时性够用)+ 置顶开关。
   useEffect(() => {
     if (!menuOpen) return;
     api.lanSyncStatus()
       .then((st) => { setLanSync(st.enabled); setLanAddr(st.address); })
       .catch(() => {});
+    api.loadConfig()
+      .then((c) => setAlwaysOnTop(c.always_on_top))
+      .catch(() => {});
   }, [menuOpen]);
+
+  const toggleAlwaysOnTop = async (next: boolean) => {
+    if (next === alwaysOnTop) return;
+    setAlwaysOnTop(next);
+    try {
+      await api.setAlwaysOnTop(next);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const toggleLanSync = async (next: boolean) => {
     if (next === lanSync) return;
@@ -218,6 +232,21 @@ export default function Settings() {
           {lanSync && lanAddr && (
             <div className="settings-section-label">本机 {lanAddr}</div>
           )}
+          <div className="settings-divider" />
+          <div className="settings-section-label">窗口置顶</div>
+          <div className="settings-pill-row">
+            {([["on", true], ["off", false]] as [string, boolean][]).map(([key, val]) => (
+              <button
+                key={key}
+                role="menuitemradio"
+                aria-checked={alwaysOnTop === val}
+                className={`settings-pill ${alwaysOnTop === val ? "active" : ""}`}
+                onClick={() => toggleAlwaysOnTop(val)}
+              >
+                {val ? "开启" : "关闭"}
+              </button>
+            ))}
+          </div>
           <div className="settings-divider" />
           <button
             role="menuitem"
