@@ -2,8 +2,10 @@ package com.tingmusic.sync
 
 import android.content.Context
 import android.graphics.BitmapFactory
+import android.media.MediaMetadataRetriever
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import com.tingmusic.library.Track
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -44,6 +46,30 @@ class CoverFetcher(
                 null
             }
         }
+
+    /**
+     * 锁屏 / 通知用的封面字节(JPEG/PNG)。来源优先级:内嵌图 → iTunes 本地缓存 →
+     * iTunes 联网(顺带写缓存)。全程 IO 线程;取不到返回 null。
+     */
+    suspend fun coverBytes(track: Track): ByteArray? = withContext(Dispatchers.IO) {
+        // 1) 内嵌封面
+        val embedded = runCatching {
+            val mmr = MediaMetadataRetriever()
+            try {
+                mmr.setDataSource(track.file.absolutePath)
+                mmr.embeddedPicture
+            } finally {
+                runCatching { mmr.release() }
+            }
+        }.getOrNull()
+        if (embedded != null && embedded.isNotEmpty()) return@withContext embedded
+        // 2) iTunes 本地缓存文件
+        val cacheFile = File(File(context.cacheDir, "covers"), cacheKey(track.id) + ".jpg")
+        if (cacheFile.isFile && cacheFile.length() > 0) return@withContext cacheFile.readBytes()
+        // 3) iTunes 联网(fetch 命中后会写入同一缓存文件),成功则读回字节
+        fetch(track.title, track.artist, track.id)
+        if (cacheFile.isFile && cacheFile.length() > 0) cacheFile.readBytes() else null
+    }
 
     private fun httpGetString(url: String): String? {
         client.newCall(Request.Builder().url(url).header("User-Agent", "TingMusic/0.1").build())

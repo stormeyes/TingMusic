@@ -9,9 +9,14 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.tingmusic.library.Track
+import com.tingmusic.sync.CoverFetcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /** UI 观察的播放状态。currentId 为当前曲目 id(Track.id = 相对路径)。 */
 data class PlaybackState(
@@ -35,9 +40,19 @@ class PlaybackController(private val context: Context) {
     /** 当前曲库快照(用于 play(index) 与 id 映射)。 */
     private var tracks: List<Track> = emptyList()
 
+    /** 异步回填封面用;随 controller 生命周期长存,协程内自查 controller 是否仍在。 */
+    private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
+    private val coverFetcher by lazy { CoverFetcher(context) }
+
     private val listener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) {
             pushState(player)
+            // 曲目切换 / 队列变化时,给当前曲目补封面(锁屏/通知靠 artwork 显示 + 配色)。
+            if (events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION) ||
+                events.contains(Player.EVENT_TIMELINE_CHANGED)
+            ) {
+                applyArtworkFor(player.currentMediaItemIndex)
+            }
         }
     }
 
@@ -115,5 +130,36 @@ class PlaybackController(private val context: Context) {
             positionMs = player.currentPosition.coerceAtLeast(0),
             durationMs = player.duration.coerceAtLeast(0),
         )
+    }
+
+    /**
+     * 给指定位置的曲目异步补封面字节并写回 MediaMetadata。队列里只带了标题/歌手,
+     * 封面较慢(内嵌解码 / iTunes 联网)所以播放后才回填:用相同 URI 的 replaceMediaItem
+     * 只更新 metadata,不打断播放(Media3 canUpdateMediaItem)。已有 artwork 则跳过。
+     */
+    private fun applyArtworkFor(index: Int) {
+        val c = controller ?: return
+        if (index < 0 || index >= c.mediaItemCount) return
+        val item = c.getMediaItemAt(index)
+        if (item.mediaMetadata.artworkData != null) return
+        val id = item.mediaId
+        val track = tracks.firstOrNull { it.id == id } ?: return
+        scope.launch {
+            val bytes = coverFetcher.coverBytes(track) ?: return@launch
+            val cc = controller ?: return@launch
+            // 队列可能已变,用 mediaId 重新定位;期间若已被别的回填补上则跳过。
+            val curIdx = (0 until cc.mediaItemCount)
+                .firstOrNull { cc.getMediaItemAt(it).mediaId == id } ?: return@launch
+            val cur = cc.getMediaItemAt(curIdx)
+            if (cur.mediaMetadata.artworkData != null) return@launch
+            val updated = cur.buildUpon()
+                .setMediaMetadata(
+                    cur.mediaMetadata.buildUpon()
+                        .setArtworkData(bytes, MediaMetadata.PICTURE_TYPE_FRONT_COVER)
+                        .build(),
+                )
+                .build()
+            cc.replaceMediaItem(curIdx, updated)
+        }
     }
 }
